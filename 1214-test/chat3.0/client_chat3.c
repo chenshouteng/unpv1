@@ -9,10 +9,79 @@
 #include<signal.h>
 #include<errno.h>
 #include<time.h>
+#include<pthread.h>
+
 #define SIZE 1024
 
 #define	SERV_PORT		 9878
+char name[32];
 
+void* pthread_recv(void * arg)
+{
+	char buffer[SIZE];
+	int sockfd = *(int *)arg;
+	while(1)
+	{
+		//用于接收信息
+		memset(buffer,0,SIZE);
+		if(sockfd > 0)
+		{
+			if((recv(sockfd,buffer,SIZE,0)) <= 0)
+			{
+				close(sockfd);
+				exit(1);
+			}
+			printf("%s\n",buffer);
+		}
+	}
+
+}
+void* pthread_send(void * arg)
+{
+	//时间函数
+	char buffer[SIZE],buf[SIZE];
+	int sockfd = *(int *)arg;
+	struct tm *p_curtime;
+	time_t timep;
+
+	while(1)
+	{
+		memset(buf,0,SIZE);
+		fgets(buf,SIZE,stdin);//获取用户输入的信息
+		memset(buffer,0,SIZE);
+		time(&timep);
+		p_curtime = localtime(&timep);
+		strftime(buffer, sizeof(buffer), "%Y/%m/%d %H:%M:%S", p_curtime);
+		/*输出时间和客户端的名字*/
+		strcat(buffer," \n\t昵称 ->");
+		strcat(buffer,name);
+		strcat(buffer,":\n\t\t  ");
+
+		/*对客户端程序进行管理*/
+		if(strncmp("e",buf,1)==0)
+		{
+			printf("该客户端下线...\n");
+			strcat(buffer,"退出聊天室！");
+			if((send(sockfd,buffer,SIZE,0)) <= 0)
+			{
+				perror("error send");
+			}
+			close(sockfd);
+			sockfd = -1;
+			exit(0);
+		}
+		else
+		{
+			
+			strncat(buffer,buf,strlen(buf)-1);
+			strcat(buffer,"\n");     		
+			if((send(sockfd,buffer,SIZE,0)) <= 0)
+			{
+				 perror("send");
+			}
+		}
+	}
+}
 int main(int argc, char **argv)
 {
     pid_t pid;
@@ -22,7 +91,11 @@ int main(int argc, char **argv)
     struct sockaddr_in client_addr;
     struct hostent *host;
     short port;
-    char *name;  
+
+	//线程标识号
+	pthread_t thread_recv,thread_send;
+	void *status;
+	int ret;
     //四个参数
     if(argc!=3) 
     { 
@@ -36,7 +109,8 @@ int main(int argc, char **argv)
         exit(1); 
     } 
 	//port=atoi(argv[2]);
-	name=argv[2];
+	strcpy(name,argv[2]);
+	printf("name is :%s\n",name);
 	/*客户程序开始建立 sockfd描述符 */ 
     if((sockfd=socket(AF_INET,SOCK_STREAM,0)) < 0) 
     { 
@@ -51,7 +125,7 @@ int main(int argc, char **argv)
     server_addr.sin_port=htons(SERV_PORT);  // (将本机器上的short数据转化为网络上的short数据)端口号
     server_addr.sin_addr=*((struct in_addr *)host->h_addr); // IP地址
     /* 客户程序发起连接请求 */ 
-    if(confd=connect(sockfd,(struct sockaddr *)(&server_addr),sizeof(struct sockaddr)) < 0) 
+    if(connect(sockfd,(struct sockaddr *)(&server_addr),sizeof(struct sockaddr)) < 0) 
     {
 		perror("connect");
 		exit(-1); 
@@ -59,63 +133,25 @@ int main(int argc, char **argv)
 	printf("Connect successful!\n");
     /*将客户端的名字发送到服务器端*/
     send(sockfd,name,20,0);
-     /*创建子进程，进行读写操作*/
-    pid = fork();//创建子进程
-    while(1)
-    {
-       /*父进程用于发送信息*/
-	   if(pid > 0)
-	   {
-          /*时间函数*/
-           struct tm *p_curtime ;
-		   time_t timep;
-           time(&timep);
-           p_curtime = localtime(&timep);
-           strftime(buffer, sizeof(buffer), "%Y/%m/%d %H:%M:%S", p_curtime);
-           /*输出时间和客户端的名字*/
-           strcat(buffer," \n\t昵称 ->");
-           strcat(buffer,name);
-           strcat(buffer,":\n\t\t  ");
-           memset(buf,0,SIZE);
-           fgets(buf,SIZE,stdin);//获取用户输入的信息
-		   /*对客户端程序进行管理*/
-           if(strncmp("e",buf,1)==0)
-           {
-				printf("该客户端下线...\n");
-				strcat(buffer,"退出聊天室！");
-				if((send(sockfd,buffer,SIZE,0)) <= 0)
-				{
-					perror("error send");
-				}
-				close(sockfd);
-				sockfd = -1;
-				exit(0);
-           }
-		   else
-		   {
-				strncat(buffer,buf,strlen(buf)-1);
-				strcat(buffer,"\n");              
-				if((send(sockfd,buffer,SIZE,0)) <= 0)
-				{
-					 perror("send");
-				}
-           }
-        }    
-        else if(pid == 0)
-        {
-            /*子进程用于接收信息*/
-			memset(buffer,0,SIZE);
-			if(sockfd > 0)
-			{
-				if((recv(sockfd,buffer,SIZE,0)) <= 0)
-				{
-					close(sockfd);
-					exit(1);
-				}
-				printf("%s\n",buffer);
-			}
-        }
-    }
+	
+	//创建线程行读写操作/
+	ret = pthread_create(&thread_recv, NULL, pthread_recv, &sockfd);//用于接收信息
+	if(ret != 0)
+	{
+		perror("Create thread_recv fail!");
+		exit(-1);
+	}
+	ret = pthread_create(&thread_send, NULL, pthread_send, &sockfd);//用于发送信息
+	if(ret != 0)
+	{
+		perror("Create thread_send fail!");
+		exit(-1);
+	}
+	printf("wait for thread_recv \n");
+	pthread_join(thread_recv, &status);
+	printf("wait for thread_send \n");
+	pthread_join(thread_send, &status);
+	printf("close sockfd \n");
 	close(sockfd);
     return 0;    
 }

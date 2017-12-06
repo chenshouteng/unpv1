@@ -67,26 +67,27 @@ int get_sockfd()
 
 void* pthread_handle(void * arg)
 {
-    int i;
-    i = *(int *)arg;
-    printf("in pthread_recv,i = %d,connfd = %d\n",i,connfd[i]);
+    int index,i;
+    index = *(int *)arg;
+    printf("in pthread_recv,index = %d,connfd = %d\n",index,connfd[index]);
 	char buffer[SIZE];
 	while(1)
 	{
 		//用于接收信息
 		memset(buffer,0,SIZE);
-		if((recv(connfd[i],buffer,SIZE,0)) <= 0)
+		//printf("111 index = %d,connfd = %d\n",index,connfd[index]);
+		if((recv(connfd[index],buffer,SIZE,0)) <= 0)
 		{
-			close(connfd[i]);
+			close(connfd[index]);
 			pthread_exit(0);
 		}
 		printf(" %s\n",buffer);
-		printf(" begin send\n");
+		//printf(" begin send\n");
 		for(i = 0; i < LISTEN_MAX ; i++)  
-		{  
+		{
 			if(connfd[i] != -1)  
 			{
-				printf("send to %d\n",connfd[i]);
+				//printf("send to %d\n",connfd[i]);
 				if(send(connfd[i],buffer,strlen(buffer),0) == -1)
 				{
 					perror("send");
@@ -202,8 +203,6 @@ int main(int argc, char **argv)
 			exit(-1);
 		}
    }
-   //这里并不会走到这里
-   //close(connfd[i]);
-   //close(listenfd);
+
    return 0;
 }
