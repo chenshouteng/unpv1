@@ -932,3 +932,23 @@ hello xiaoming
 2017/12/06 16:14:37 
         昵称 ->xiaohong:
                   hello xiaoming
+				  
+				  
+2017/12/7 				  
+是csapp.h其实就是一堆头文件的打包，在http://csapp.cs.cmu.edu/public/code.html 这里可以下载。这是《深入理解计算机系统》配套网站
+
+Proxy源代码分析--谈谈如何学习Linux网络编程
+https://www.cnblogs.com/erisen/p/6123000.html
+
+ proxy_epoll源代码分析 linux网络编程入门的源码分析资料，附源码
+http://blog.csdn.net/daniel_ustc/article/details/8687139
+
+理解代理服务器：
+从proxy.c中读出来的：
+本机A  代理服务器B  服务器C
+代理服务器B相当于转发的作用
+代理服务器创建守护进程，B先根据用 B 自己的端口号创建a_socket_fd 服务器，这个socket负责监听本机A是否发起向B的连接。fork出
+子进程，然后在子进程中创建另外一个c_socket_fd 客户端，主动向服务器C发起连接。接着用select监听这两个socket描述符，当检测到a_socket_fd可读，
+则把a_socket_fd描述符读到B中的buf中，然后再把buf写到c_socket_fd描述符。当检测到c_socket_fd 描述符可读，则把c_socket_fd 读到B中的buf，然后再把
+buf写到a_socket_fd描述符中去。
+非常清晰！
