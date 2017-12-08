@@ -952,3 +952,7 @@ http://blog.csdn.net/daniel_ustc/article/details/8687139
 则把a_socket_fd描述符读到B中的buf中，然后再把buf写到c_socket_fd描述符。当检测到c_socket_fd 描述符可读，则把c_socket_fd 读到B中的buf，然后再把
 buf写到a_socket_fd描述符中去。
 非常清晰！
+
+写一个系列，从头到尾教你写一个代理服务器。
+分为一、二、三、四、五篇，
+先阅读开源代码，理解透，再一步一步拆解。
